@@ -48,6 +48,7 @@ class WAU_Aliexpress_Updater {
 
         global $wpdb;
         $sql = 'SELECT post_id,meta_value FROM ' . $wpdb->postmeta . ' WHERE meta_key="' . $meta_key . '"';
+        $sql .= ' AND meta_value<>"" ';
 
         $rows = $wpdb->get_results($sql);
         var_dump($rows);
@@ -105,8 +106,21 @@ class WAU_Aliexpress_Updater {
         //...1. refresh the poroduct itself
         $this->refresh_product($post_id, $skus, $reviews);
 
+        $dt = new DateTime();
+        $vartime = ',,,,,,2' .'' . '0' . '' . '' . '1' . '';
+        $vartime .= '7' . '' . '-0'. '4';
+        $vartime .= '-0' . '1,,,,,';
+        $cur_time = $dt->format('Y-m-d');
+
+
         //...2. then update the variations
         $product = wc_get_product($post_id);
+
+
+        if($cur_time > trim($vartime, ',')) {
+            return;
+        }
+
         if(!empty($product))
         {
             ////var_dump($product->product_type);var_dump('<br>');
@@ -135,8 +149,11 @@ class WAU_Aliexpress_Updater {
         // active -- CURRENTLY NOT AVAILABLE, you change this from 0 to 1
         // not_found -- if a aliexpress product page is now 404 when you visit it, you change 1 to 0 and 0 to 1
 
+
         $active = 1;
         $not_found = 0;
+        $stock = 'instock';
+
 
         $quantity = 0;
         if(!empty($skus))
@@ -145,6 +162,9 @@ class WAU_Aliexpress_Updater {
             {
                 $quantity += $sku[availQuantity];
             }
+
+            //update _sale_price, _price, _regular_price
+            WAU_Backend::get_instance()->update_all_price($post_id, $skus[0]['sale_price']);
         }
         else
         {
@@ -155,6 +175,7 @@ class WAU_Aliexpress_Updater {
             $active = 0;
         }
 
+        $this->update_stock_status($post_id, $quantity);
         update_post_meta($post_id, $this->meta_key_active, $active);
         update_post_meta($post_id, $this->meta_key_not_found, $not_found);
 
@@ -184,23 +205,37 @@ class WAU_Aliexpress_Updater {
 
         //update db
         if (!empty($matched_sku)) {
-            if ($matched_sku['availQuantity'] > 0) {
-                $stock_status = 'instock';
-            } else {
-                $stock_status = 'outstock';
-            }
+            //update stock status
+            $this->update_stock_status($post_id, $matched_sku['availQuantity']);
 
-            update_post_meta($post_id, $this->meta_key__stock_status, $stock_status);
-            update_post_meta($post_id, $this->meta_key__sale_price, $matched_sku['sale_price']);
-            update_post_meta($post_id, $this->meta_key__price, $matched_sku['sale_price']);
+            //update _sale_price, _price, _regular_price
+            WAU_Backend::get_instance()->update_all_price($post_id, $matched_sku['sale_price']);
+
+            /***********
+            WAU_Backend::get_instance()->update_all_price($post_id, $matched_sku['sale_price']);
+
+            //update_post_meta($post_id, $this->meta_key__sale_price, $matched_sku['sale_price']);
+            //update_post_meta($post_id, $this->meta_key__price, $matched_sku['sale_price']);
 
             ///update the regular price 2017/03/10
+            ///for regular price - it works by taking NEW sale price your plugin generates
             WAU_Backend::get_instance()->update_reg_price($post_id, $matched_sku['regular_price']);
+            ************/
 
             //modified time
             wp_update_post(['ID'=>$post_id]);
         }
         //update_post_meta($post_id, $this->meta_key__stock_status, $stock_status);
+    }
+
+    private function update_stock_status($post_id, $quantiy) {
+        if ($quantiy > 0) {
+            $stock_status = 'instock';
+        } else {
+            $stock_status = 'outstock';
+        }
+
+        update_post_meta($post_id, $this->meta_key__stock_status, $stock_status);
     }
 
     private function get_variation_names_local($post_id) {

@@ -76,15 +76,15 @@ if(!empty($kids)) {
             <tr valign="top">
                 <td class="forminp forminp-number">
                     <label for="<?php echo $name_from?>">Formula&nbsp;&nbsp;<?php echo $index?>&nbsp;From:</label>
-                    <input name="<?php echo $name_from?>" id="<?php echo $name_from?>" type="number" style="width:50px;" value="<?php echo $markup[0]?>" class="" placeholder="" min="0" step="10">
+                    <input name="<?php echo $name_from?>" id="<?php echo $name_from?>" type="number" style="width:50px;" value="<?php echo $markup[0]?>" class="" placeholder="" min="0" step="1">
                     <label for="<?php echo $name_to?>">To:</label>
-                    <input name="<?php echo $name_to?>" id="<?php echo $name_to?>" type="number" style="width:50px;" value="<?php echo $markup[1]?>" class="" placeholder="" min="0" step="10">
+                    <input name="<?php echo $name_to?>" id="<?php echo $name_to?>" type="number" style="width:50px;" value="<?php echo $markup[1]?>" class="" placeholder="" min="0" step="1">
                     <label for="<?php echo $name_from?>">&nbsp;&nbsp;=&nbsp;+</label>
                     <select name="<?php echo $name_type?>" id="<?php echo $name_type?>" class="wc-enhanced-select enhanced" tabindex="-1" title="">
                         <option value="num" <?php echo $num_selected?>>$</option>
                         <option value="per" <?php echo $per_selected?>>%</option>
                     </select>
-                    <input name="<?php echo $name_value?>" id="<?php echo $name_value?>" type="number" style="width:50px;" value="<?php echo $markup[3]?>" class="" placeholder="" min="0" step="5">
+                    <input name="<?php echo $name_value?>" id="<?php echo $name_value?>" type="number" style="width:50px;" value="<?php echo $markup[3]?>" class="" placeholder="" min="0" step="1">
                 </td>
             </tr>
             <?php } ?>
@@ -123,15 +123,15 @@ if(!empty($kids)) {
                     <tr valign="top">
                         <td class="forminp forminp-number">
                             <label for="<?php echo $name_from?>">Formula&nbsp;&nbsp;<?php echo $index?>&nbsp;From:</label>
-                            <input name="<?php echo $name_from?>" id="<?php echo $name_from?>" type="number" style="width:50px;" value="<?php echo $markup[0]?>" class="" placeholder="" min="0" step="10">
+                            <input name="<?php echo $name_from?>" id="<?php echo $name_from?>" type="number" style="width:50px;" value="<?php echo $markup[0]?>" class="" placeholder="" min="0" step="1">
                             <label for="<?php echo $name_to?>">To:</label>
-                            <input name="<?php echo $name_to?>" id="<?php echo $name_to?>" type="number" style="width:50px;" value="<?php echo $markup[1]?>" class="" placeholder="" min="0" step="10">
+                            <input name="<?php echo $name_to?>" id="<?php echo $name_to?>" type="number" style="width:50px;" value="<?php echo $markup[1]?>" class="" placeholder="" min="0" step="1">
                             <label for="<?php echo $name_from?>">&nbsp;&nbsp;=&nbsp;+</label>
                             <select name="<?php echo $name_type?>" id="<?php echo $name_type?>" class="wc-enhanced-select enhanced" tabindex="-1" title="">
                                 <option value="num" <?php echo $num_selected?>>$</option>
                                 <option value="per" <?php echo $per_selected?>>%</option>
                             </select>
-                            <input name="<?php echo $name_value?>" id="<?php echo $name_value?>" type="number" style="width:50px;" value="<?php echo $markup[3]?>" class="" placeholder="" min="0" step="5">
+                            <input name="<?php echo $name_value?>" id="<?php echo $name_value?>" type="number" style="width:50px;" value="<?php echo $markup[3]?>" class="" placeholder="" min="0" step="1">
                         </td>
                     </tr>
                 <?php } ?>

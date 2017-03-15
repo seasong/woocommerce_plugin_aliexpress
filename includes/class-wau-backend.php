@@ -20,6 +20,10 @@ class WAU_Backend {
     private $option_name_regprice_range_markup = '_wau_regprice_range_markup'; //reguar price
     private $option_name_product_updater = '_wau_product_updater';
 
+    private $meta_key_sale_price = '_sale_price';
+    private $meta_key_price = '_price';
+    private $meta_key_regular_price = '_regular_price';
+
     /**
      * Instance of this class.
      *
@@ -68,7 +72,7 @@ class WAU_Backend {
 
         //2. Loop the product to update the price
         //$markup = [0, 10, '$', 5];
-        $this->UpdatePrice();
+        ///$this->UpdatePrice(); //will update in cron only 2017-03-15
 
         wp_redirect($_REQUEST['_wp_http_referer']);
     }
@@ -101,53 +105,7 @@ class WAU_Backend {
         return $ret;
     }
 
-    public function UpdatePrice() {
-        $markups = $this->get_price_range_markups();
-        for($index = 1; $index < 5; $index++) {
-            $markup = $this->get_price_range_markup($markups, $index - 1);
-            $this->UpdatePriceHelper($markup);
-        }
-    }
 
-    /*
-     * say we take USD price of each product
-     * Lets say a product = $10 (simple product)
-     * and we have markup of $5
-     * Means the sale price = $15
-     *
-     * for one markup
-     */
-    public function UpdatePriceHelper($markup)
-    {
-        global $wpdb;
-        $meta_key_sale = '_sale_price';
-
-        if (!empty($markup) && count($markup) == 4) {
-            $from = $markup[0];
-            $to = $markup[1];
-            $type = $markup[2];
-            $value = $markup[3];
-
-            // $0 and $10 = + $5
-            if ($to >= $from && $value != 0) {
-                $sql = 'SELECT post_id, meta_value FROM ' . $wpdb->postmeta . ' WHERE meta_key="' . $meta_key_sale . '"';
-                $ret = $wpdb->get_results($sql);
-                if (is_array($ret)) {
-                    foreach ($ret as $row) {
-                        $id = $row->post_id;
-                        $price = $row->meta_value;
-                        if ($price >= $from AND $price < $to) {
-                            if ($type == '$') {
-                                update_post_meta($id, $meta_key_sale, $price + $value);
-                            } else {
-                                update_post_meta($id, $meta_key_sale, round($price * (100 + $value) / 100,2));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 
 
     /**
@@ -188,15 +146,91 @@ class WAU_Backend {
 
     public function get_price_range_markup($markups, $index) {
 
-        $ret = [0, 0, '$', 0]; //has a default value anyway
+        $ret = array(); //has a default value anyway
         //0,10,$,5
         if(count($markups) > $index) {
             $cols = explode(',', $markups[$index]);
             if(count($cols) === 4) {
-                $ret = [$cols[0], $cols[1], $cols[2], $cols[3]];
+                $from = $cols[0];
+                $to = $cols[1];
+                $value = $cols[3];
+
+                // $0 and $10 = + $5
+                if ($to >= $from && $value != 0) {
+                    $ret = [$cols[0], $cols[1], $cols[2], $cols[3]];
+                }
             }
         }
         return $ret;
+    }
+
+    /////////////////////////////////// sale price ///////
+    public function update_all_price($post_id, $sale_price) {
+
+        $updated = false;
+        $markups = $this->get_price_range_markups();
+        for($index = 1; $index < 5; $index++) {
+            $markup = $this->get_price_range_markup($markups, $index - 1);
+            if(!empty($markup)) {
+
+                $new_price = $this->get_new_price($post_id, $this->meta_key_sale_price, $sale_price, $markup);
+                if($new_price != $sale_price)
+                {
+                    $this->update_price_db($post_id, $new_price);
+                    $updated = true;
+                }
+            }
+        } //for
+
+        //if there's no markup
+        if($updated == false) {
+            $this->update_price_db($post_id, $sale_price);
+        }
+    }
+
+    private function update_price_db($post_id, $new_price) {
+        //1. update _sale_price
+        update_post_meta($post_id, $this->meta_key_sale_price, $new_price);
+
+        //2. update _price, same value as _sale_price
+        update_post_meta($post_id, $this->meta_key_price, $new_price);
+
+        //3. update _regular_price
+        $this->update_reg_price($post_id, $new_price);
+    }
+
+    /*
+     * say we take USD price of each product
+     * Lets say a product = $10 (simple product)
+     * and we have markup of $5
+     * Means the sale price = $15
+     *
+     * for one markup
+     */
+    public function get_new_price($post_id, $meta_key, $price, $markup)
+    {
+        $new_price = $price;
+
+        if (!empty($markup) && count($markup) == 4) {
+            $from = $markup[0];
+            $to = $markup[1];
+            $type = $markup[2];
+            $value = $markup[3];
+
+            // $0 and $10 = + $5
+            if ($to >= $from && $value != 0) {
+                if ($price >= $from AND $price < $to) {
+                    if ($type == '$') {
+                        $new_price = $price + $value;
+                    } else {
+                        $new_price = round($price * (100 + $value) / 100, 2);
+                    }
+                }
+            }
+        }
+
+
+        return $new_price;
     }
 
     ///////////////////////////////////For regular price//////////////////////////////
@@ -235,14 +269,29 @@ class WAU_Backend {
     }
 
 
-    public function update_reg_price($post_id, $reg_price) {
+    public function update_reg_price($post_id, $sale_price) {
 
+        $updated = false;
         $markups = $this->get_regprice_range_markups();
-        for($index = 1; $index < 5; $index++) {
+        for($index = 1; $index < 5; $index++)
+        {
             $markup = $this->get_price_range_markup($markups, $index - 1);
-            $this->UpdateRegPriceHelper($markup,$post_id, $reg_price);
+            if(!empty($markup))
+            {
+                $new_price = $this->get_new_price($post_id, $this->meta_key_regular_price, $sale_price, $markup);
+                if($new_price != $sale_price)
+                {
+                    update_post_meta($post_id, $this->meta_key_regular_price, $new_price);
+                    $updated = true;
+                }
+            }
+        } //for
+
+        if($updated == false) {
+            update_post_meta($post_id, $this->meta_key_regular_price, $sale_price);
         }
     }
+
     /*
      *
      * $sale_price
@@ -252,7 +301,7 @@ class WAU_Backend {
     public function UpdateRegPriceHelper($markup,$post_id, $sale_price)
     {
         global $wpdb;
-        $meta_key_regular = '_regular_price';;
+        $meta_key_regular = '_regular_price';
 
         if (!empty($markup) && count($markup) == 4) {
             $from = $markup[0];

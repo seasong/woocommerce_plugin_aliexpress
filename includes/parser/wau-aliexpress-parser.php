@@ -139,7 +139,7 @@ class WAU_Aliexpress_Parser {
         $json = '';
 
         $start_pos_prefix = 'var skuProducts=';
-        $start_flag = $start_pos_prefix . '[{"skuAttr":"';
+        $start_flag = $start_pos_prefix . '[{"sku';
         $end_flag = '}];';
         $prefix_len = strlen($start_pos_prefix);
 
